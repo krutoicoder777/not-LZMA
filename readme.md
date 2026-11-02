@@ -46,8 +46,8 @@ You can add your own test data by adding files into the `test/data/` directory
 
 # Benchmarks
 ```
-  [OK] war_and_peace.txt: 2609729 B -> 766165 B (29.4%) | C: 1.743s, D: 0.206s
-  [OK] enwik8: 100000000 B -> 35743887 B (35.7%) | C: 79.266s, D: 11.167s
+  [OK] war_and_peace.txt: 2609729 B -> 807995 B (31.0%) | C: 1.072s, D: 0.356s
+  [OK] enwik8: 100000000 B -> 36580236 B (36.6%) | C: 56.441s, D: 11.735s
 ```
 
 # Plans
