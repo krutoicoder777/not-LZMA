@@ -22,13 +22,12 @@ int lzma_encode_stream(FILE *in, FILE *out)
         return LZMA_ERR_MEM;
     }
 
-    model_t len_model, dist_high_model, dist_mid_model, dist_low_model;
+    model_t len_model;
     lit_model_t lit_model;
+    slot_model_t slot_model;
 
     model_init(&len_model);
-    model_init(&dist_high_model);
-    model_init(&dist_mid_model);
-    model_init(&dist_low_model);
+    slot_model_init(&slot_model);
     lit_model_init(&lit_model);
 
     uint8_t prev_byte = 0;
@@ -44,20 +43,17 @@ int lzma_encode_stream(FILE *in, FILE *out)
             rc_update(rc, model_cum(&len_model, len_sym), model_freq(&len_model, len_sym), len_model.total);
             model_update(&len_model, len_sym);
 
-            uint32_t d_high = (token.distance >> 16) & 0xFF;
-            uint32_t d_mid = (token.distance >> 8) & 0xFF;
-            uint32_t d_low = token.distance & 0xFF;
-
-            rc_update(rc, model_cum(&dist_high_model, d_high), model_freq(&dist_high_model, d_high),
-                      dist_high_model.total);
-            model_update(&dist_high_model, d_high);
-
-            rc_update(rc, model_cum(&dist_mid_model, d_mid), model_freq(&dist_mid_model, d_mid), dist_mid_model.total);
-            model_update(&dist_mid_model, d_mid);
-
-            rc_update(rc, model_cum(&dist_low_model, d_low), model_freq(&dist_low_model, d_low), dist_low_model.total);
-            model_update(&dist_low_model, d_low);
-
+			int s = slot(token.distance);
+			int eb = extra_bits(s);
+			uint32_t base = base_dist(s);
+			uint32_t offset = token.distance - base;
+			rc_update(rc, slot_model_cum(&slot_model, s), slot_model_freq(&slot_model, s), slot_model.total);
+			slot_model_update(&slot_model, s);
+			for (int i = eb - 1; i >= 0; i--) 
+			{
+				int bit = (offset >> i) & 1;
+				rc_update(rc, bit, 1, 2);
+			}
             prev_byte = p_get_last_byte(p);
         }
         else
@@ -94,14 +90,13 @@ int lzma_decode_stream(FILE *in, FILE *out, uint64_t original_size)
         return LZMA_ERR_MEM;
     }
 
-    model_t len_model, dist_high_model, dist_mid_model, dist_low_model;
+    model_t len_model;
     lit_model_t lit_model;
+	slot_model_t slot_model;
 
     model_init(&len_model);
-    model_init(&dist_high_model);
-    model_init(&dist_mid_model);
-    model_init(&dist_low_model);
     lit_model_init(&lit_model);
+	slot_model_init(&slot_model);
 
     uint8_t prev_byte = 0;
     uint64_t decoded_bytes = 0;
@@ -121,22 +116,21 @@ int lzma_decode_stream(FILE *in, FILE *out, uint64_t original_size)
             model_update(&len_model, len_sym);
             uint32_t len = len_sym + 3;
 
-            target = rd_target(rd, dist_high_model.total);
-            int d_high = model_sym(&dist_high_model, target);
-            rd_update(rd, model_cum(&dist_high_model, d_high), model_freq(&dist_high_model, d_high));
-            model_update(&dist_high_model, d_high);
+            target = rd_target(rd, slot_model.total);
+			int s = slot_model_sym(&slot_model, target);
+			rd_update(rd, slot_model_cum(&slot_model, s), slot_model_freq(&slot_model, s));
+			slot_model_update(&slot_model, s);
 
-            target = rd_target(rd, dist_mid_model.total);
-            int d_mid = model_sym(&dist_mid_model, target);
-            rd_update(rd, model_cum(&dist_mid_model, d_mid), model_freq(&dist_mid_model, d_mid));
-            model_update(&dist_mid_model, d_mid);
-
-            target = rd_target(rd, dist_low_model.total);
-            int d_low = model_sym(&dist_low_model, target);
-            rd_update(rd, model_cum(&dist_low_model, d_low), model_freq(&dist_low_model, d_low));
-            model_update(&dist_low_model, d_low);
-
-            uint32_t distance = (d_high << 16) | (d_mid << 8) | d_low;
+			int eb = extra_bits(s);
+			uint32_t base = base_dist(s);
+			uint32_t offset = 0;
+			for (int i = 0; i < eb; i++) {
+				target = rd_target(rd, 2);
+				int bit = target;
+				rd_update(rd, bit, 1);
+				offset = (offset << 1) | bit;
+			}
+			uint32_t distance = base + offset;
 
             token_t token;
             token.is_match = 1;

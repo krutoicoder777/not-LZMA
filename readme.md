@@ -46,13 +46,20 @@ You can add your own test data by adding files into the `test/data/` directory
 
 # Benchmarks
 ```
-  [OK] war_and_peace.txt: 2609729 B -> 770194 B (29.5%) | C: 1.327s, D: 0.386s
-  [OK] enwik8: 100000000 B -> 36088544 B (36.1%) | C: 67.982s, D: 17.722s
+  [OK] war_and_peace.txt: 2609729 B -> 766165 B (29.4%) | C: 1.743s, D: 0.206s
+  [OK] enwik8: 100000000 B -> 35743887 B (35.7%) | C: 79.266s, D: 11.167s
 ```
 
 # Plans
-* [ ] slots + bits for distance encoding
+* [X] slots + bits for distance encoding
 * [ ] rep-distances
 * [ ] optimal parser
 * [ ] bit-tree models
 * [ ] multi-file archiver
+
+# Updates
+* v0.2 slots + bits for distance encoding added, compression slightly improved (36.1% -> 35.7% on enwik8, which is better than gzip`s 36.44%), encoding speed decreased significantly:
+```
+  [OK] war_and_peace.txt: 2609729 B -> 766165 B (29.4%) | C: 1.743s, D: 0.206s
+  [OK] enwik8: 100000000 B -> 35743887 B (35.7%) | C: 79.266s, D: 11.167s
+```
