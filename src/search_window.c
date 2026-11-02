@@ -136,7 +136,7 @@ void sw_find_match(search_window_t *sw, uint32_t *distance, uint32_t *len)
     uint32_t best_len = 0;
     uint32_t best_dist = 0;
 
-    for (uint32_t i = 0; i < 64; i++)
+    for (uint32_t i = 0; i < 32; i++)
     {
         if (candidate == -1)
         {
